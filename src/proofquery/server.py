@@ -30,7 +30,7 @@ app = FastAPI(
     version=__version__,
 )
 
-DASHBOARD_PATH = config.REPO_ROOT / "dashboards" / "dashboard.html"
+DASHBOARD_PATH = config.DASHBOARD_HTML
 
 # Names the dashboard fetches. The metrics lane owns the implementations and a
 # REGISTRY dict; that registry is authoritative when present. This list is the

@@ -18,7 +18,8 @@ RUN pip install --no-cache-dir ".[serve]"
 # pin where the app looks for them (installed package can't infer REPO_ROOT).
 COPY data/raw/cfpb_complaints.csv ./data/raw/cfpb_complaints.csv
 COPY dashboards ./dashboards
-ENV PROOFQUERY_DATA_DIR=/app/data
+ENV PROOFQUERY_DATA_DIR=/app/data \
+    PROOFQUERY_DASHBOARD=/app/dashboards/dashboard.html
 
 # Fail the build, not the runtime, if the warehouse doesn't reproduce.
 RUN python -m proofquery.warehouse

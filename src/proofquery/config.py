@@ -12,6 +12,14 @@ DATA_DIR = Path(os.environ.get("PROOFQUERY_DATA_DIR", REPO_ROOT / "data"))
 RAW_CSV = DATA_DIR / "raw" / "cfpb_complaints.csv"
 DB_PATH = Path(os.environ.get("PROOFQUERY_DB", DATA_DIR / "proofquery.duckdb"))
 SQL_DIR = Path(__file__).resolve().parent / "sql"
+# Repo-root-relative assets: overridable because an INSTALLED package cannot
+# infer the repo tree from its own __file__ (site-packages parents[2] is a
+# python prefix, not the checkout). The container sets this explicitly.
+DASHBOARD_HTML = Path(
+    os.environ.get(
+        "PROOFQUERY_DASHBOARD", REPO_ROOT / "dashboards" / "dashboard.html"
+    )
+)
 
 SOURCE_URL = (
     "https://www.consumerfinance.gov/data-research/consumer-complaints/"
