@@ -17,6 +17,7 @@ RUN pip install --no-cache-dir ".[serve]"
 # The dataset is the fetch query's output (ADR-004); ship those exact bytes and
 # pin where the app looks for them (installed package can't infer REPO_ROOT).
 COPY data/raw/cfpb_complaints.csv ./data/raw/cfpb_complaints.csv
+COPY dashboards ./dashboards
 ENV PROOFQUERY_DATA_DIR=/app/data
 
 # Fail the build, not the runtime, if the warehouse doesn't reproduce.
