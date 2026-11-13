@@ -1,5 +1,7 @@
 # proofquery
 
+[![ci](https://github.com/ar33s08/proofquery/actions/workflows/ci.yml/badge.svg)](https://github.com/ar33s08/proofquery/actions/workflows/ci.yml)
+
 **An AI analyst that can only say things it can prove.**
 
 proofquery is an end-to-end analytics workbench over a real federal dataset
