@@ -19,7 +19,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import sys
 
 from . import config
 from .agent import run
@@ -130,8 +129,11 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     if not config.DB_PATH.exists():
-        print("warehouse missing - run `proofquery build` first", file=sys.stderr)
-        return 2
+        # CI/first-run convenience: building from the committed slice is
+        # deterministic, so auto-build rather than fail.
+        from .warehouse import build
+
+        build()
     report = {"offline": run_evals("double")}
 
     base_url = os.environ.get("PROOFQUERY_LLM_BASE_URL")
