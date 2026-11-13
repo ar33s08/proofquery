@@ -92,7 +92,7 @@ def scan_staging(con) -> dict:
 def run_quality_suite(con) -> Findings:
     """Full quality report over the built warehouse (facts must exist)."""
     f = Findings()
-    for code, q in _QUARANTINE_PROBES.items():
+    for code in _QUARANTINE_PROBES:
         f.counts[code] = con.execute(
             "SELECT COUNT(*) FROM facts.quarantine WHERE reason = ?", [code]
         ).fetchone()[0]

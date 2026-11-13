@@ -68,7 +68,7 @@ def _monthly_volume_trend(con, **_):
     return con.sql(
         """
         SELECT
-            DATE_TRUNC('month', date_received) AS month,
+            CAST(DATE_TRUNC('month', date_received) AS DATE) AS month,
             COUNT(*)                           AS complaints
         FROM facts.complaints
         GROUP BY 1
@@ -100,15 +100,15 @@ def _product_mix(con, month=None, **_):
                    SUM(complaints) * 1.0 / SUM(SUM(complaints)) OVER () AS share
             FROM marts.product_monthly
             GROUP BY product
-            ORDER BY complaints DESC
+            ORDER BY complaints DESC, product ASC
             """
         ).fetchall()
-    return con.sql(
+    return con.execute(
         """
         SELECT product, complaints, product_share AS share
         FROM marts.product_monthly
         WHERE DATE_TRUNC('month', month) = DATE_TRUNC('month', CAST(? AS DATE))
-        ORDER BY complaints DESC
+        ORDER BY complaints DESC, product ASC
         """,
         [str(month)],
     ).fetchall()

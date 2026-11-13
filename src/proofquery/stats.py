@@ -45,7 +45,8 @@ def two_proportion_z_test(con, company_a: str, company_b: str,
 
     counts = {}
     for name, comp in (("a", company_a), ("b", company_b)):
-        row = con.execute(q, [comp]).fetchone()
+        fetched = con.execute(q, [comp]).fetchall()
+        row = fetched[0] if fetched else None
         if row is None:
             raise ValueError(f"no rows for company {comp!r} (check exact company_norm spelling)")
         counts[name] = (int(row[0]), int(row[1]))

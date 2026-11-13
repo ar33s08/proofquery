@@ -9,7 +9,6 @@ meta.dataset before anything else happens.
 from __future__ import annotations
 
 import hashlib
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -98,7 +97,7 @@ def _load_facts(con) -> dict:
     con.execute("DELETE FROM facts.complaints")
     con.execute("DELETE FROM facts.quarantine")
     findings = scan_staging(con)
-    for code, count in findings.items():
+    for code in findings:
         con.executemany(
             "INSERT INTO facts.quarantine VALUES (?, ?, '')",
             [(row[0], code) for row in findings[code].rows],
@@ -162,7 +161,7 @@ def build(csv_path: Path | None = None) -> BuildReport:
             "SELECT COUNT(*) FROM staging.complaints_raw"
         ).fetchone()[0]
         report.fact_rows = con.execute("SELECT COUNT(*) FROM facts.complaints").fetchone()[0]
-        for code, label in QUARANTINE_CODES.items():
+        for code in QUARANTINE_CODES:
             n = con.execute(
                 "SELECT COUNT(*) FROM facts.quarantine WHERE reason = ?", [code]
             ).fetchone()[0]
