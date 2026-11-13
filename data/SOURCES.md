@@ -7,7 +7,7 @@
 | Source | Consumer Financial Protection Bureau (US federal agency) |
 | Artifact | Official nightly bulk export: https://files.consumerfinance.gov/ccdb/complaints.csv.zip (~366 MB, updated daily) |
 | License | CC0 1.0 — public domain dedication (CFPB data portal) |
-| Slice | Complaints received 2025-01-01 … 2026-10-31; 250 oldest-per-month across the 22 monthly windows (stratified by time, deterministic) |
+| Slice | Complaints received 2025-01-01 … 2026-10-31; 250 per month across the 22 monthly windows, deterministic md5-hash sample within each month (spread across all days, not the month's earliest hours) |
 | Slice definition | `tools/fetch_data.py` — the slice IS the SQL in that file; re-running against the same export reproduces the same rows |
 | Rows | `meta.dataset.row_count` in the warehouse, echoed by `proofquery build` |
 | Source digest | SHA-256 of the export zip recorded in `meta.dataset` at build time |

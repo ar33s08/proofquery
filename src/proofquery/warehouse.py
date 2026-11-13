@@ -66,12 +66,16 @@ class BuildReport:
 def ingest(con, csv_path: Path) -> str:
     """Land the CSV into staging (deduped by complaint_id) + record provenance."""
     digest = sha256_of(csv_path)
-    con.sql("DELETE FROM staging.complaints_raw")
-    con.sql("DELETE FROM meta.dataset")
+    con.execute("DELETE FROM staging.complaints_raw")
+    con.execute("DELETE FROM meta.dataset")
     con.execute(
         """
         INSERT INTO staging.complaints_raw
-        SELECT * FROM (
+        SELECT complaint_id, product, sub_product, issue, sub_issue, company,
+               state, zip_code, tags, submitted_via, date_received,
+               date_sent_to_company, company_response, timely,
+               company_public_response
+        FROM (
             SELECT *, ROW_NUMBER() OVER (
                 PARTITION BY complaint_id ORDER BY date_received
             ) AS rn
@@ -81,7 +85,7 @@ def ingest(con, csv_path: Path) -> str:
         """,
         [str(csv_path)],
     )
-    n = con.sql("SELECT COUNT(*) FROM staging.complaints_raw").fetchone()[0]
+    n = con.execute("SELECT COUNT(*) FROM staging.complaints_raw").fetchone()[0]
     con.execute(
         "INSERT INTO meta.dataset VALUES (?, ?, ?, current_timestamp, ?)",
         [config.SOURCE_URL, config.SOURCE_LICENSE, digest, n],
@@ -91,8 +95,8 @@ def ingest(con, csv_path: Path) -> str:
 
 def _load_facts(con) -> dict:
     """staging -> facts, with typed casts and quarantine of invalid rows."""
-    con.sql("DELETE FROM facts.complaints")
-    con.sql("DELETE FROM facts.quarantine")
+    con.execute("DELETE FROM facts.complaints")
+    con.execute("DELETE FROM facts.quarantine")
     findings = scan_staging(con)
     for code, count in findings.items():
         con.executemany(
@@ -133,9 +137,14 @@ def _load_facts(con) -> dict:
 
 
 def _register_udf(con) -> None:
-    con.create_macro(
-        "normalize_company_udf(s)",
-        "regexp_replace(regexp_replace(upper(trim(s)), '(,? ?(INC|LLC|N\\.A\\.|L\\.L\\.C\\.)\\.?)+$', '', 'gi'), '^THE +', '', 'gi')",
+    con.execute(
+        """
+        CREATE OR REPLACE MACRO normalize_company_udf(s) AS
+            regexp_replace(
+                regexp_replace(upper(trim(s)),
+                               '(,? ?(INC|LLC|N\\.A\\.|L\\.L\\.C\\.)\\.?)+$', '', 'gi'),
+                '^THE +', '', 'gi')
+        """
     )
 
 
@@ -144,23 +153,23 @@ def build(csv_path: Path | None = None) -> BuildReport:
     con = config.connect()
     report = BuildReport()
     try:
-        con.sql(config.sql("schema.sql"))
+        con.execute(config.sql("schema.sql"))
         report.sha256 = ingest(con, csv_path)
         _register_udf(con)
         _load_facts(con)
-        con.sql(config.sql("marts.sql"))
-        report.staging_rows = con.sql(
+        con.execute(config.sql("marts.sql"))
+        report.staging_rows = con.execute(
             "SELECT COUNT(*) FROM staging.complaints_raw"
         ).fetchone()[0]
-        report.fact_rows = con.sql("SELECT COUNT(*) FROM facts.complaints").fetchone()[0]
+        report.fact_rows = con.execute("SELECT COUNT(*) FROM facts.complaints").fetchone()[0]
         for code, label in QUARANTINE_CODES.items():
-            n = con.sql(
+            n = con.execute(
                 "SELECT COUNT(*) FROM facts.quarantine WHERE reason = ?", [code]
             ).fetchone()[0]
             if n:
                 report.quarantine[code] = n
         report.marts = {
-            t: con.sql(f"SELECT COUNT(*) FROM marts.{t}").fetchone()[0]
+            t: con.execute(f"SELECT COUNT(*) FROM marts.{t}").fetchone()[0]
             for t in (
                 "complaints_daily",
                 "product_monthly",

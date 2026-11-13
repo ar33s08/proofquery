@@ -93,9 +93,9 @@ def run_quality_suite(con) -> Findings:
     """Full quality report over the built warehouse (facts must exist)."""
     f = Findings()
     for code, q in _QUARANTINE_PROBES.items():
-        f.counts[code] = con.sql(
+        f.counts[code] = con.execute(
             "SELECT COUNT(*) FROM facts.quarantine WHERE reason = ?", [code]
         ).fetchone()[0]
     for code, q in _DQ_PROBES.items():
-        f.counts[code] = con.sql(q.replace("SELECT complaint_id", "SELECT COUNT(*)")).fetchone()[0]
+        f.counts[code] = con.execute(q.replace("SELECT complaint_id", "SELECT COUNT(*)")).fetchone()[0]
     return f

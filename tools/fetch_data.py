@@ -10,8 +10,10 @@ free-text field left is `company_public_response` (what the company chose to
 say publicly). This repo states that honestly instead of faking a text lane.
 
 The slice IS the SQL below: complaints received 2025-01-01..2026-10-31,
-250 oldest-per-month across 22 monthly windows (deterministic, stratified
-by time, one command to reproduce).
+250 per month across 22 monthly windows, sampled by md5(complaint_id) so the
+pick is deterministic (md5 is pure) yet spread across every day of the month
+(a '250 oldest per month' first cut concentrated the corpus in 22 days and
+starved the daily time-series marts -- hash-ordering fixed it).
 
 Usage:
     python tools/fetch_data.py [path/to/complaints.csv.zip]
@@ -76,7 +78,7 @@ COPY (
             "Timely response?"                   AS timely,
             row_number() OVER (
                 PARTITION BY date_trunc('month', try_cast("Date received" AS DATE))
-                ORDER BY "Date received", "Complaint ID"
+                ORDER BY md5("Complaint ID"), "Complaint ID"
             )                                    AS rn
         FROM read_csv(?, columns=?, header=true, ignore_errors=false,
                       delim=',', quote='"', escape='"', max_line_size=100000000)
@@ -112,14 +114,18 @@ def main() -> int:
         subprocess.run(["unzip", "-q", "-o", str(zip_path), "-d",
                         str(zip_path.parent)], check=True)
     out_path = Path("data/raw/cfpb_complaints.csv")
+    tmp_path = out_path.with_suffix(".tmp.csv")
     con = duckdb.connect()
     con.execute(
         SLICE_SQL.replace("{per_month}", str(PER_MONTH)),
-        [str(csv_path), EXPORT_COLUMNS, str(out_path)],
+        [str(csv_path), EXPORT_COLUMNS, str(tmp_path)],
     )
+    import os
+
+    os.replace(tmp_path, out_path)  # atomic swap; readers never see a partial file
     n = con.sql(
         f"SELECT COUNT(*) FROM read_csv('{out_path}', header=true)"
-    ).fetchone()[0]
+    ).fetchall()[0][0]
     print(f"wrote {n} rows to {out_path}")
     return 0
 
