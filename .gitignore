@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+data/proofquery.duckdb
+data/raw/fetch.log
+data/raw/complaints.csv.zip
+data/raw/complaints.csv
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.DS_Store

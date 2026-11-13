@@ -1,0 +1,52 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install
+        run: pip install -e '.[dev,ml,serve]'
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Tests (offline, deterministic)
+        run: pytest -q
+
+      # Evidence gate: evals/ must exist for this to run — the evals lane
+      # lands it; until then this step is the contract CI will enforce.
+      - name: Evidence gate
+        run: python -m proofquery.evals --gate
+
+      # Secret scan. gitleaks-action v2 needs a GITLEAKS_LICENSE secret for
+      # private repos; set it in repo secrets or swap this step for the
+      # grep fallback below.
+      - name: Secret scan (gitleaks)
+        if: github.event_name == 'push'
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      # Fallback / dependency-free pass: fail on obvious credential shapes in
+      # tracked text files (always runs, complements gitleaks).
+      - name: Secret scan (grep fallback)
+        run: |
+          ! grep -rInE \
+            '(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY|xox[baprs]-[0-9A-Za-z-]{10,}|gh[pousr]_[0-9A-Za-z]{36,})' \
+            --exclude-dir=.git --exclude-dir=.venv .
